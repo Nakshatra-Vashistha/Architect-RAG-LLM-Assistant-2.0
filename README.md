@@ -1,89 +1,70 @@
-🧠 RAG-Based Architecture Research Assistant
+RAG-Based Architecture Research Assistant
 
-A production-grade Retrieval-Augmented Generation (RAG) system designed to process architectural PDFs, extract meaningful knowledge, and answer queries using a grounded LLM pipeline.
+A production-grade Retrieval-Augmented Generation (RAG) system designed to process architectural PDFs, extract structured knowledge, and answer user queries using a grounded large language model pipeline.
 
-🚀 Overview
+Overview
 
-This project builds a complete end-to-end RAG pipeline:
+This project implements a complete end-to-end RAG system:
 
-📄 Extracts data from messy PDFs (including scanned ones)
-🧹 Cleans and filters noisy architectural text
-✂️ Splits data into token-aware chunks
-🔢 Converts text into vector embeddings
-🗄️ Stores embeddings in ChromaDB
-🤖 Uses a local LLM (Ollama) to generate grounded answers
-🌐 Exposes everything via a FastAPI backend
-🏗️ System Architecture
-                ┌───────────────┐
-                │   PDF Files   │
-                └──────┬────────┘
-                       │
-                       ▼
-        ┌─────────────────────────────┐
-        │ Data Cleaning Pipeline      │
-        │ (OCR + Dedup + Filtering)  │
-        └──────────┬──────────────────┘
-                   │
-                   ▼
-        ┌─────────────────────────────┐
-        │ Token-Aware Chunking        │
-        │ (Sliding Window + Overlap)  │
-        └──────────┬──────────────────┘
-                   │
-                   ▼
-        ┌─────────────────────────────┐
-        │ JSONL Dataset               │
-        │ (Chunks + Metadata)         │
-        └──────────┬──────────────────┘
-                   │
-                   ▼
-        ┌─────────────────────────────┐
-        │ Embedding Model             │
-        │ (Sentence Transformers)     │
-        └──────────┬──────────────────┘
-                   │
-                   ▼
-        ┌─────────────────────────────┐
-        │ Vector DB (ChromaDB)        │
-        └──────────┬──────────────────┘
-                   │
-                   ▼
-        ┌─────────────────────────────┐
-        │ RAG Pipeline                │
-        │ (Retrieve + Prompt + LLM)   │
-        └──────────┬──────────────────┘
-                   │
-                   ▼
-        ┌─────────────────────────────┐
-        │ FastAPI / CLI Interface     │
-        └─────────────────────────────┘
-⚙️ Features
-✅ Fault-Tolerant PDF Processing
-Uses PyMuPDF first, falls back to Tesseract OCR
-Handles scanned PDFs automatically
-Deduplicates pages using MD5 hashing
-✅ Noise Reduction
-Removes:
-Boilerplate text
-Page numbers
-Formatting artifacts
-Improves Signal-to-Noise Ratio (SNR)
-✅ Smart Chunking
-Token-aware chunking using model tokenizer
-Sliding window with overlap
-Prevents context loss across chunks
-✅ Efficient Storage
-Uses JSONL format
+Extracts data from both digital and scanned PDFs
+Cleans and filters noisy architectural text
+Splits data into token-aware chunks
+Converts text into vector embeddings
+Stores embeddings in ChromaDB
+Retrieves relevant context for queries
+Generates grounded responses using a local LLM
+Exposes functionality through a FastAPI backend and CLI
+System Architecture
+PDF Files
+   │
+   ▼
+Data Cleaning Pipeline (OCR + Deduplication + Filtering)
+   │
+   ▼
+Token-Aware Chunking (Sliding Window + Overlap)
+   │
+   ▼
+JSONL Dataset (Chunks + Metadata)
+   │
+   ▼
+Embedding Model (Sentence Transformers)
+   │
+   ▼
+Vector Database (ChromaDB)
+   │
+   ▼
+RAG Pipeline (Retrieve + Prompt + LLM)
+   │
+   ▼
+API Layer / CLI Interface
+Key Features
+Fault-Tolerant PDF Processing
+Uses PyMuPDF for primary extraction
+Falls back to Tesseract OCR for scanned pages
+Handles mixed-format PDFs without failure
+Deduplication
+Uses MD5 hashing for page-level deduplication
+Prevents redundant storage and improves query efficiency
+Noise Reduction
+Removes boilerplate text (headers, footers, page numbers)
+Filters low-quality chunks based on heuristics
+Improves signal-to-noise ratio
+Token-Aware Chunking
+Uses tokenizer aligned with embedding model
+Ensures chunk size stays within token limits
+Applies sliding window with overlap to preserve context
+Efficient Storage
+Stores data in JSONL format
 Supports streaming ingestion
-Avoids memory overflow
-✅ Semantic Retrieval
-Uses multi-qa-MiniLM embeddings
-Retrieves based on meaning, not keywords
-✅ Grounded LLM Responses
-Strict prompt engineering
-Prevents hallucination
-Provides source references
-📂 Project Structure
+Avoids memory bottlenecks for large datasets
+Semantic Retrieval
+Uses Sentence Transformers for embeddings
+Retrieves based on semantic similarity instead of keywords
+Grounded Response Generation
+Strict prompt engineering to reduce hallucination
+Context-aware answer generation
+Includes source attribution
+Project Structure
 ├── data_pipeline/
 │   ├── clean_pdfs.py
 │   ├── chunk_jsonl.py
@@ -100,45 +81,42 @@ Provides source references
 ├── chroma_db/
 ├── requirements.py
 └── README.md
-🔍 Data Pipeline (Step-by-Step)
-1️⃣ Hybrid PDF Extraction
-Extract text using PyMuPDF
-If empty → fallback to OCR
+Data Pipeline
+1. Hybrid PDF Extraction
+
+The system first attempts text extraction using PyMuPDF. If no usable text is found, it falls back to OCR.
+
 if not text.strip():
     text = extract_text_with_ocr(page)
 
-💡 Why this matters:
-Real-world PDFs are messy — this ensures no data loss.
+This ensures robustness when dealing with scanned or image-based PDFs.
 
-2️⃣ Deduplication
-Uses MD5 hashing
+2. Deduplication
+
+Each extracted page is hashed using MD5 to prevent duplicate processing.
+
 text_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
 
-💡 Prevents:
+This reduces storage overhead and improves retrieval performance.
 
-Duplicate storage
-Redundant embeddings
-Slower queries
-3️⃣ Noise Filtering
-Removes low-quality text
+3. Noise Filtering
+
+Text is filtered using heuristics to remove low-quality or irrelevant content.
+
 if alpha_chars / len(text) < 0.3:
     return True
 
-💡 Ensures:
+This step significantly improves downstream model performance.
 
-Garbage In = Garbage Out ❌
-Clean Data = Accurate AI ✅
+4. Token-Aware Chunking
 
-4️⃣ Token-Based Chunking
+Instead of splitting text by characters, the system uses token-based chunking aligned with the embedding model.
 
-Instead of characters → uses tokens
+Maintains chunk size within limits
+Uses overlap to preserve context across chunks
+JSONL Data Format
 
-Chunk A: [------text------]
-Chunk B:      [------text------]
-Overlap ensures context continuity
-🧾 JSONL Data Format
-
-Each line = one chunk
+Each chunk is stored as a separate JSON object:
 
 {
   "doc_id": "25845916",
@@ -148,59 +126,64 @@ Each line = one chunk
   "text": "...",
   "chunk_hash": "abc123"
 }
-Why JSONL?
-Feature	Benefit
-Streaming	Handles large datasets
-Flexible	Supports metadata
-Memory Efficient	No full load required
-🧠 Embedding Layer
-Uses Sentence Transformers
+Advantages of JSONL
+Memory-efficient streaming
+Flexible schema for metadata
+Scales well with large datasets
+Embedding Layer
+
+The system uses Sentence Transformers:
+
 Model: multi-qa-MiniLM-L6-cos-v1
+Converts text into dense vector representations
 self.model.encode(text)
-What it does:
 
-Converts text → vector
+These embeddings enable semantic similarity search.
 
-"building design" → [0.23, -0.91, ...]
+Vector Database
 
-💡 Enables semantic search
+ChromaDB is used for storing and retrieving embeddings.
 
-🗄️ Vector Database (ChromaDB)
-Stores embeddings
-Supports similarity search
-Auto-embeds via wrapper
-Bonus Feature:
+Key features:
 
-✔ Auto-recovery if DB breaks
-
-🎯 RAG Pipeline Flow
+Persistent local storage
+Automatic embedding integration
+Fault recovery for schema inconsistencies
+RAG Pipeline
 User Query
    │
    ▼
 Convert to Embedding
    │
    ▼
-Retrieve Top-K Chunks
+Retrieve Top-K Relevant Chunks
    │
    ▼
-Inject into Prompt
+Construct Prompt with Context
    │
    ▼
-LLM Generates Answer
-🧾 Prompt Engineering
+Generate Answer using LLM
+Prompt Engineering
+
+The system enforces strict instructions:
+
 You are an expert in architecture research.
-Use ONLY the provided excerpts.
-Why?
-Prevent hallucination
-Ensure factual answers
-⚡ Performance Optimizations
-🚀 Pre-Warming LLM
-Sends dummy request at startup
-Eliminates cold start delay
-✂️ Context Truncation
-Prevents token overflow
-Reduces latency
-🌐 API Layer (FastAPI)
+Use only the provided excerpts to answer.
+
+This ensures:
+
+Reduced hallucination
+Fact-based responses
+Traceability
+Performance Optimizations
+Model Pre-Warming
+Sends a dummy request at startup
+Eliminates cold-start latency
+Context Truncation
+Limits input size to LLM
+Reduces response time
+Prevents context overflow
+API Layer
 Endpoint
 POST /query
 Request
@@ -213,22 +196,23 @@ Response
   "sources": [...]
 }
 Features
-Input validation via Pydantic
-Clean error handling
+Input validation using Pydantic
+Structured responses
+Proper error handling
 CORS enabled
-🖥️ CLI Interface
+CLI Interface
 
-Run directly from terminal:
+Run queries directly from the terminal:
 
 python main.py --query "fire codes"
-Modes
+Available Commands
 Command	Description
---init	Rebuild DB
---query	Single query
---interactive	Chat mode
-📦 Dependencies
+--init	Initialize database
+--query	Run single query
+--interactive	Start interactive mode
+Dependencies
 
-Key libraries:
+Core libraries used:
 
 transformers
 sentence-transformers
@@ -237,40 +221,43 @@ fastapi
 pymupdf
 pytesseract
 torch
-🧩 Design Decisions
-Why Local Models?
-✅ No API cost
-✅ Data privacy
-✅ Offline capability
-Why FastAPI?
-Async support
-High performance
-Auto docs (Swagger)
-Why Sentence Transformers?
+Design Decisions
+Local Models
+Ensures data privacy
+No external API cost
+Works offline
+FastAPI
+High performance for async workloads
+Built-in documentation
+Suitable for ML APIs
+Sentence Transformers
 Optimized for semantic search
-Better than generic embeddings
-⚠️ Challenges Solved
+Better performance for Q&A retrieval tasks
+Challenges Addressed
 Problem	Solution
 Scanned PDFs	OCR fallback
-Duplicate pages	Hashing
-Context loss	Sliding window
-LLM hallucination	Strict prompts
-Latency	Pre-warming
-🔮 Future Improvements
-Add frontend (React / Next.js)
-Use hybrid search (BM25 + vector)
-Add re-ranking models
-Deploy on cloud (AWS/GCP)
-Add user authentication
-🧑‍💻 How to Run
+Duplicate pages	Hash-based deduplication
+Context loss	Sliding window chunking
+Hallucination	Strict prompt constraints
+High latency	Pre-warming and truncation
+Future Improvements
+Frontend integration (React / Next.js)
+Hybrid search (BM25 + vector search)
+Re-ranking models
+Cloud deployment
+Authentication and user management
+Setup and Usage
 # Install dependencies
 python requirements.py
 
-# Initialize DB
+# Initialize database
 python main.py --init
 
-# Run API
+# Start API server
 uvicorn api:app --reload
 
-# Query
+# Example query
 curl -X POST http://localhost:8000/query
+Summary
+
+This project demonstrates a full RAG pipeline that ingests unstructured PDF data, transforms it into semantic embeddings, retrieves relevant context, and generates grounded responses using a local language model.
